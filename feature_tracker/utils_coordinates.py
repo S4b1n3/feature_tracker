@@ -42,7 +42,7 @@ def check_range_set(s, number, interval=2):
     # return ret
 
 
-def get_full_length_coordinates(nPoints, nTimes, normalized, path_length, skip_param, win_x, win_y, positive=True):
+def get_full_length_coordinates(nPoints, nTimes, normalized, path_length, skip_param, win_x, win_y, angle_range=[90, 100], delta_angle_max=90):
     '''
     Returns the floor of coordinates of full length for
     both the tracking curve, and the distractor
@@ -75,16 +75,12 @@ def get_full_length_coordinates(nPoints, nTimes, normalized, path_length, skip_p
     #Generate 3x the coordinates, and then sample path_length out of them
     '''
     cd_2 = GenCoord()
-    # coordinates_2 = cd_2.get_coordinates(length_curve=nTimes, angle_range=[90, 100], distance_points=.002,
-    #                                      delta_angle_max=90, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
-    #                                      y_min=0, y_max=win_y)
-
-    coordinates_2 = cd_2.get_coordinates(length_curve=nTimes, angle_range=[10, 170], distance_points=.002,
-                                         delta_angle_max=180, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
+    coordinates_2 = cd_2.get_coordinates(length_curve=nTimes, angle_range=angle_range, distance_points=.002,
+                                         delta_angle_max=delta_angle_max, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
                                          y_min=0, y_max=win_y)
 
-    # coordinates_2 = cd_2.get_coordinates(length_curve=nTimes, angle_range=[89, 91], distance_points=.002,
-    #                                      delta_angle_max=15, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
+    # coordinates_2 = cd_2.get_coordinates(length_curve=nTimes, angle_range=[10, 170], distance_points=.002,
+    #                                      delta_angle_max=180, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
     #                                      y_min=0, y_max=win_y)
 
     # taking one-third points from a random location
@@ -106,49 +102,6 @@ def get_full_length_coordinates(nPoints, nTimes, normalized, path_length, skip_p
                          in range(0, len(coordinates_2))]
 
 
-    '''
-    #Generate 3x the coordinates, and then sample path_length out of them
-    '''
-    # cd_3 = GenCoord()
-    # coordinates_3 = cd_3.get_coordinates(length_curve=nTimes, angle_range=[90, 100], distance_points=.002,
-    #                                      delta_angle_max=90, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
-    #                                      y_min=0, y_max=win_y)
-    #
-    # # taking one-third points from a random location
-    # rn_l = np.random.randint(len(coordinates_3) - (path_length * skip_param) + 1)
-    # coordinates_3 = coordinates_3[rn_l:rn_l + (path_length * skip_param):skip_param]
-    #
-    # #compute the distance between start and end points
-    # start = coordinates_2[0]
-    # end = coordinates_3[-1]
-    # #compute distance
-    # dist = np.sqrt(((start[0] - end[0]) ** 2) + ((start[1] - end[1]) ** 2))
-    #
-    # #print('dist_3: ', dist)
-    # #reject curve if the distance is more than 7.5 +- 2.5
-    # while (dist > 10 or dist < 5) or (coordinates_2[0] == coordinates_3[-1]):
-    #     #Generate 3x the coordinates, and then sample path_length out of them
-    #     cd_3 = GenCoord()
-    #     coordinates_3 = cd_3.get_coordinates(length_curve=nTimes, angle_range=[90, 100], distance_points=.002,
-    #                                         delta_angle_max=90, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
-    #                                         y_min=0, y_max=win_y)
-    #
-    #     # taking one-third points from a random location
-    #     rn_l = np.random.randint(len(coordinates_3) - (path_length * skip_param) + 1)
-    #     coordinates_3 = coordinates_3[rn_l:rn_l + (path_length * skip_param):skip_param]
-    #
-    #     #compute the distance between start and end points
-    #     start = coordinates_2[0]
-    #     end = coordinates_3[-1]
-    #     dist = np.sqrt(((start[0] - end[0]) ** 2) + ((start[1] - end[1]) ** 2))
-    # print(dist)
-    #
-    # # normalizing to an arbitrary location in the screen
-    # if normal[1]:
-    #     # coordinates_3=[((coordinates_3[i][0]-(win_x/float(normal[1]))),(coordinates_3[i][1]-(win_y/float(normal[1])))) for i in range(0,len(coordinates_3))]
-    #     coordinates_3 = [((coordinates_3[i][0] - (float(normal[1]))), (coordinates_3[i][1] - (float(normal[1])))) for i
-    #                      in range(0, len(coordinates_3))]
-
     # add the normalization coefficients to the normalized set for further use
     normalized.add(normal[0])
     normalized.add(normal[1])
@@ -157,7 +110,7 @@ def get_full_length_coordinates(nPoints, nTimes, normalized, path_length, skip_p
 
 
 def get_third_length_distractor_coordinates(nPoints, nTimes, normalized, num_distractors, path_length,
-                                            skip_param, win_x, win_y):
+                                            skip_param, win_x, win_y, angle_range=[90, 100], delta_angle_max=90):
     '''
     Returns the coordinates of one-third length for
     specified number of distractor curves.
@@ -200,14 +153,11 @@ def get_third_length_distractor_coordinates(nPoints, nTimes, normalized, num_dis
         #Generate 3x the coordinates, and then sample one-third out of them
         '''
         cd_d = GenCoord()
-        # coordinates_d = cd_d.get_coordinates(length_curve=nTimes, angle_range=[90, 100], distance_points=.002,
-        #                                      delta_angle_max=90, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
-        #                                      y_min=0, y_max=win_y)
-        coordinates_d = cd_d.get_coordinates(length_curve=nTimes, angle_range=[10, 170], distance_points=.002,
-                                             delta_angle_max=180, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
+        coordinates_d = cd_d.get_coordinates(length_curve=nTimes, angle_range=angle_range, distance_points=.002,
+                                             delta_angle_max=delta_angle_max, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
                                              y_min=0, y_max=win_y)
-        # coordinates_d = cd_d.get_coordinates(length_curve=nTimes, angle_range=[89, 91], distance_points=.002,
-        #                                      delta_angle_max=15, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
+        # coordinates_d = cd_d.get_coordinates(length_curve=nTimes, angle_range=[10, 170], distance_points=.002,
+        #                                      delta_angle_max=180, wiggle_room=.95, rigidity=.95, x_min=0, x_max=win_x,
         #                                      y_min=0, y_max=win_y)
 
         # taking one-third points from a random location

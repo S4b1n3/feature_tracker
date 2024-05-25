@@ -101,8 +101,8 @@ def interpret_npy_header(encoded_image_data):
         
 
 #define input and output data directory
-tf.compat.v1.flags.DEFINE_string('input_directory', './10dist_control_phases/32frames/batch_5/pathtracker/samples/','Input data directory')
-tf.compat.v1.flags.DEFINE_string('output_directory', './10dist_control_phases/32frames/pathtracker/tfrecords/','Output data directory')
+tf.compat.v1.flags.DEFINE_string('input_directory', './10dist/32frames/batch_0/idshapes_idcolors/samples/','Input data directory')
+tf.compat.v1.flags.DEFINE_string('output_directory', './10dist/32frames/idshapes_idcolors/tfrecords/','Output data directory')
 
 #define how many training a validatin (and test) TFRecord files you want to write
 tf.compat.v1.flags.DEFINE_integer('train_shards', 40, 'Number of shards in training TFRecord files.') #2
@@ -382,12 +382,12 @@ def main(unused_argv):
   print('Saving results to %s' % FLAGS.output_directory)
   
   # Defining batch number here, not making it a flag, simply because it might be null in few cases, and we do not want to have extra '-'s there. 
-  batch_num='-batch_5-'
+  batch_num='-batch_0-'
   
   # Run it for train, test and validation datasets
   # _process_dataset('validation', FLAGS.input_directory,FLAGS.validation_shards,FLAGS.validation_labels_file)
   # _process_dataset('test', FLAGS.input_directory,FLAGS.validation_shards,FLAGS.test_labels_file)
-  _process_dataset('val'+batch_num, FLAGS.input_directory, FLAGS.train_shards)#,FLAGS.train_labels_file)
+  _process_dataset('train'+batch_num, FLAGS.input_directory, FLAGS.train_shards)#,FLAGS.train_labels_file)
  
 if __name__ == '__main__':
   tf.compat.v1.app.run()
