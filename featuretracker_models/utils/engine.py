@@ -67,11 +67,11 @@ def model_step(model, imgs, masks, model_name, test=False, cae=None):
     else:
         if test:
             output, states, gates = model.forward(imgs, testmode=True)
-            return output, None #states, gates
+            return (output, states, gates), None
         else:
             output, jv_penalty = model.forward(imgs)
     if test:
-        return output, None #, None
+        return (output, None, None), None #, None
     else:
         return output, jv_penalty
 
@@ -291,7 +291,7 @@ def plot_results(states, imgs, target, output, timesteps, gates=None, prep_gifs=
                     os.remove(filename)
 
 
-LOCAL = "../../tracking/"+args.data_dir
+LOCAL = "../"+args.data_dir
 
 def get_datasets():
     return ALL_DATASETS
@@ -301,7 +301,7 @@ def dataset_selector(dist, speed, length, data_repo, optical_flow=False, testmod
     stem = "tfrecords"
     if optical_flow:
         stem = "tfrecords_optic_flow"
-    lp = os.path.join(LOCAL, str(dist)+"dist_64speed_half_cs/"+str(length)+"frames/" + data_repo + "/tfrecords/")
+    lp = os.path.join(LOCAL, str(dist)+"dist/"+str(length)+"frames/" + data_repo + "/tfrecords/")
 
     print(lp)
     if os.path.exists(lp):

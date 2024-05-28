@@ -43,7 +43,7 @@ disentangle_channels = False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 wandb.login()
 run = wandb.init(project="tracking", name=args.name, config=args)
-args.name = args.name+"_"+run.id
+# args.name = args.name+"_"+run.id
 
 
 def debug_plot(img):
