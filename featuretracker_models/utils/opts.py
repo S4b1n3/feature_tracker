@@ -19,12 +19,12 @@ parser.add_argument('--ckpt', type=str, default=None)
 parser.add_argument('--dist', type=int)
 parser.add_argument('--speed', type=int)
 parser.add_argument('--length', type=int)
-parser.add_argument('--data_repo', type=str, default="pathtracker")
+parser.add_argument('--data_repo', type=str, default="idshapes_idcolors")
 parser.add_argument('--channels_color', type=int, default=3)
 parser.add_argument('--im_size', type=int, default=32)
-parser.add_argument('--init_phases', type=str, default='ideal', choices=['ideal', 'ideal2','ideal3', 'random', 'learnable', 'last', 'cae', 'tag'])
 
-parser.add_argument('--data_dir', type=str, default="feature_space_change_pathtracker-main")
+parser.add_argument('--data_dir', type=str, default="feature_tracker")
+parser.add_argument('--loss_coef1', type=float, default=1)
 
 # ========================= Learning Configs ==========================
 parser.add_argument('--epochs', default=30, type=int, metavar='N',
@@ -54,45 +54,5 @@ parser.add_argument('--log', type=eval, default=True, choices=[True, False])
 
 parser.add_argument('--val-freq', '-vf', default=2000, type=int,
                     metavar='N', help='Validation frequency')
-
-# ========================= Kuramoto related ==========================
-parser.add_argument('--distractor_masks', type=eval, default=True, choices=[True, False])
-parser.add_argument('--kuramoto_channels', type=int, default=8)
-parser.add_argument('--epsilon', type=float, default=0.202)
-parser.add_argument('--epsilon_l2', type=float, default=0)
-parser.add_argument('--lr_kuramoto', type=float, default=0.006)
-parser.add_argument('--lr_kuramoto_l2', type=float, default=0.006)
-parser.add_argument('--lr_kuramoto_l3', type=float, default=0.006)
-parser.add_argument('--lr_kuramoto_l4', type=float, default=0.006)
-parser.add_argument('--mean_r', type=float, default=0)
-parser.add_argument('--std_g', type=float, default=3)
-parser.add_argument('--std_r', type=float, default=3)
-parser.add_argument('--coef', type=float, default=1)
-parser.add_argument('--k', type=int, default=13)
-parser.add_argument('--k_l2', type=int, default=11)
-parser.add_argument('--k_l3', type=int, default=11)
-parser.add_argument('--loss_coef1', type=float, default=1)
-parser.add_argument('--loss_coef2', type=float, default=1)
-parser.add_argument('--timesteps', type=int, default=15)
-parser.add_argument('--from_input', type=eval, default=False, choices=[True, False])
-
-parser.add_argument('--coef_green', type=float, default=1.5)
-parser.add_argument('--coef_red', type=float, default=5.)
-parser.add_argument('--coef_red_green', type=float, default=80.)
-parser.add_argument('--neg_coef', type=float, default=1.5)
-parser.add_argument('--learnable', type=eval, default=False, choices=[True, False])
-
-parser.add_argument('--track_coef_green', type=float, default=10)
-parser.add_argument('--track_coef_red', type=float, default=1)
-parser.add_argument('--track_coef_blue', type=float, default=2)
-parser.add_argument('--track_coef_red_green', type=float, default=-1)
-parser.add_argument('--track_coef_green_blue', type=float, default=-1)
-parser.add_argument('--track_std_g', type=float, default=0.8)
-parser.add_argument('--track_std_r', type=float, default=0.7)
-parser.add_argument('--track_k', type=int, default=3)
-parser.add_argument('--track_lr_kuramoto', type=float, default=0.08)
-parser.add_argument('--track_timesteps', type=int, default=1)
-parser.add_argument('--track_init_end', type=eval, default=False, choices=[True, False])
-
 
 

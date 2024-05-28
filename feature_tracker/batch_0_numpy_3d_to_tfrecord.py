@@ -385,7 +385,7 @@ def main(unused_argv):
   batch_num='-batch_0-'
   
   # Run it for train, test and validation datasets
-  # _process_dataset('validation', FLAGS.input_directory,FLAGS.validation_shards,FLAGS.validation_labels_file)
+  # _process_dataset('val', FLAGS.input_directory,FLAGS.validation_shards,FLAGS.validation_labels_file)
   # _process_dataset('test', FLAGS.input_directory,FLAGS.validation_shards,FLAGS.test_labels_file)
   _process_dataset('train'+batch_num, FLAGS.input_directory, FLAGS.train_shards)#,FLAGS.train_labels_file)
  

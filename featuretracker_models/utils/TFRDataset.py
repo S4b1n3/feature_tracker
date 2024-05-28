@@ -16,11 +16,8 @@ def read_tfrecord(example, timesteps=64, channels_color=3, im_size=32):
 
     image = example['image']
     image = tf.io.decode_raw(image, tf.uint8)
-    # image = tf.reshape(image, [64, 128, 128, 3])
     # Downsized dataset
     image = tf.reshape(image, [2, timesteps, im_size, im_size, channels_color])
-    # image = tf.reshape(image, [128, 16, 16, 3])
-    # image = tf.reshape(image, [64, 128, 128, 3])
 
     label  = example['label']
     # height = example['height']

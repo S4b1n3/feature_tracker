@@ -11,7 +11,7 @@ from torch._six import inf
 
 def metric_scores(target, pred):
     # import pdb; pdb.set_trace()
-    correct = pred.eq(target)#.cuda()
+    correct = pred.eq(target).cuda()
     tp = correct[target == 1].sum().float()
     tn = correct[target == 0].sum().float()
 
@@ -31,16 +31,12 @@ def metric_scores(target, pred):
 
 def acc_scores(target, prediction):
     target = target.byte()
-    # _, pred = prediction.topk(1, 0, True, True) # using 0th dimension for topk calc. Was using 1 earlier
-    # pr=torch.zeros(prediction.shape)
     pr=[]
-    # prediction=prediction.squeeze()
-    # import pdb; pdb.set_trace()
     for i in prediction:
         # print(i)
         if i>0.5: pr.append(torch.tensor([1]))
         else: pr.append(torch.tensor([0]))
-    pred=torch.stack(pr)#.cuda()
+    pred=torch.stack(pr).cuda()
     balacc, precision, recall, f1s = metric_scores(target, pred.squeeze().byte())
     return balacc * 100, precision, recall, f1s
 

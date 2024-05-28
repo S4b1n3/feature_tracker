@@ -44,7 +44,6 @@ def model_step(model, imgs, masks, model_name, test=False, cae=None):
         output = model.forward(imgs)
         jv_penalty = torch.tensor([1]).float().cuda() 
     elif model_name in SLOWFAST:
-        # frames = F.interpolate(imgs, 224, mode='trilinear', align_corners=True)  # F.interpolate(imgs, 224)
         frames = imgs
         fast_pathway = frames
         # Perform temporal sampling from the fast pathway.
@@ -215,21 +214,9 @@ def prepare_data(imgs, target, args, device, disentangle_channels, use_augmentat
 
 
 def load_ckpt(model, model_path):
-    # from glob import glob
-    # model_path = glob(model_path)
     print(model_path)
     checkpoint = torch.load(model_path[0])
-    # Check if "module" is the first part of the key
-    # import pdb; pdb.set_trace()
-    # check = checkpoint['state_dict'].keys()[0]
-
-    # sd = checkpoint['state_dict']
-    # if "module" in checkpoint and not args.parallel:
-    #     new_sd = {}
-    #     for k, v in sd.items():
-    #         new_sd[k.replace("module.", "")] = v
-    #     sd = new_sd
-    model.load_state_dict(checkpoint['state_dict'], strict=False) #['state_dict']
+    model.load_state_dict(checkpoint['state_dict'], strict=False)
     return model
 
 
@@ -304,7 +291,7 @@ def plot_results(states, imgs, target, output, timesteps, gates=None, prep_gifs=
                     os.remove(filename)
 
 
-LOCAL = "../../"+args.data_dir
+LOCAL = "../../tracking/"+args.data_dir
 
 def get_datasets():
     return ALL_DATASETS
@@ -314,19 +301,14 @@ def dataset_selector(dist, speed, length, data_repo, optical_flow=False, testmod
     stem = "tfrecords"
     if optical_flow:
         stem = "tfrecords_optic_flow"
-    if testmode: #_64speed_half_cs
-        # lp = os.path.join(LOCAL, "new_psycho_data/"+str(dist)+"dist_1h_1c_traj/tfrecords/" + data_repo + "/")
-
-        lp = os.path.join(LOCAL, str(dist)+"dist_2h_1c/"+str(length)+"frames/" + data_repo + "/tfrecords/")
-    else:
-        lp = os.path.join(LOCAL, str(dist)+"dist_64speed_half_cs/"+str(length)+"frames/" + data_repo + "/tfrecords/")
+    lp = os.path.join(LOCAL, str(dist)+"dist_64speed_half_cs/"+str(length)+"frames/" + data_repo + "/tfrecords/")
 
     print(lp)
     if os.path.exists(lp):
         print("Loading data from local storage.")
         return lp, length, 100000, 10000, 10000
     else:
-        return '../'+args.data_dir + '/'+str(dist)+'dist_2h_1c/'+str(length)+'frames/'+data_repo+'/tfrecords/', length, 100000, 10000, 10000
+        print("Data not found. Please Generate the data first.")
 
 
 

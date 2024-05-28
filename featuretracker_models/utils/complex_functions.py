@@ -304,19 +304,6 @@ def stable_angle(x: torch.tensor, eps=1e-7):
     y.real[(real < eps) & (real > -1.0 * eps)] = eps
     return y.angle()
 
-# def stable_angle_2(x: torch.tensor, eps=1e-7):
-#     """ Function to ensure that the gradients of .angle() are well behaved."""
-#     real = x.real
-#     # nudge = (real == 0) * eps
-#     # real = real + nudge
-#     imag = x.imag
-#     # nudge = (imag == 0) * eps
-#     # imag = imag + nudge
-#     near_zeros = real < eps
-#     real = real * (near_zeros.logical_not())
-#     real = real + (near_zeros * eps)
-#     return torch.atan2(imag, real)
-
 def stable_angle_loss(y: torch.tensor, x: torch.tensor, eps=1e-7):
     """ Function to ensure that the gradients of .angle() are well behaved."""
     near_zeros = y < eps
@@ -370,23 +357,6 @@ def complex_convolution(z_input, weight, padding, stride=1):
 
 def synch_loss(phases, masks):
     phases = phases + math.pi
-    # y = torch.sin(phases)
-    # x = torch.cos(phases)
-    # # phases = torch.atan2(y, x)
-    # phases = stable_angle_loss(y, x)
-    # import pdb; pdb.set_trace()
-    # new_masks = torch.zeros_like(masks[:,1:])
-    # new_masks[:, 1] = masks[:, 1]+masks[:, 0]
-    # new_masks = torch.where(new_masks != 0, torch.ones_like(new_masks), torch.zeros_like(new_masks))
-    # new_masks[:,0] = 1 - new_masks[:,1]
-
-    # #independent group for the start/end squares (square4)
-    # new_masks = torch.zeros((masks.shape[0], 4, masks.shape[2], masks.shape[3])).to(masks.get_device())
-    # new_masks[:,1:] = masks
-    # new_masks = torch.where(new_masks != 0, torch.ones_like(new_masks), torch.zeros_like(new_masks))
-    # new_masks[:,0] = torch.where(new_masks[:,1] != 0, torch.zeros_like(new_masks[:,1]), torch.ones_like(new_masks[:,1]))
-    # new_masks[:,0] = torch.where(new_masks[:,2] != 0, torch.zeros_like(new_masks[:,2]), new_masks[:,0])
-    # new_masks[:,0] = torch.where(new_masks[:,3] != 0, torch.zeros_like(new_masks[:,3]), new_masks[:,0])
 
     # no group for the start/end squares - not even in the bg - (square5)
     new_masks = torch.zeros_like(masks)
@@ -396,13 +366,6 @@ def synch_loss(phases, masks):
                                   torch.ones_like(new_masks[:, 1]))
     new_masks[:, 0] = torch.where(new_masks[:, 2] != 0, torch.zeros_like(new_masks[:, 2]), new_masks[:, 0])
     new_masks[:, 0] = torch.where(masks[:, 0] != 0, torch.zeros_like(masks[:, 0]), new_masks[:, 0])
-
-    # new_masks = torch.zeros_like(masks)
-    # new_masks[:, 1:] = masks[:,1:]
-    # # new_masks[:,2]  = masks[:,2] + masks[:,0]
-    # new_masks = torch.where(new_masks != 0, torch.ones_like(new_masks), torch.zeros_like(new_masks))
-    # new_masks[:,0] = torch.where(new_masks[:,1] != 0, torch.zeros_like(new_masks[:,1]), torch.ones_like(new_masks[:,1]))
-    # new_masks[:,0] = torch.where(new_masks[:,2] != 0, torch.zeros_like(new_masks[:,2]), new_masks[:,0])
 
     num_groups = new_masks.shape[1]
     group_size = new_masks.sum((2,3))
@@ -420,8 +383,6 @@ def synch_loss(phases, masks):
 
     masked_phases = active_phases * new_masks #[:,1].unsqueeze(1)
 
-    # xx = torch.where(masks.bool(), torch.cos(masked_phases), torch.zeros_like(masked_phases))
-    # yy = torch.where(masks.bool(), torch.sin(masked_phases), torch.zeros_like(masked_phases))
     xx = new_masks.bool() * torch.cos(masked_phases) + 1e-6
     yy = new_masks.bool() * torch.sin(masked_phases) + 1e-6
     temp = (xx.sum((2,3))) ** 2 + (yy.sum((2,3))) ** 2
@@ -724,11 +685,6 @@ class ComplexMaxPool2d(pl.LightningModule):
 
 def complex_max_pooling2D(z_in, kernel_size, stride, epsilon=1e-7):
     m_psi = z_in.abs()
-    # nudge = (z_in.real == 0) * epsilon
-    # stable_real = z_in.real + nudge
-    # nudge = (z_in.imag == 0) * epsilon
-    # stable_imag = z_in.imag + nudge
-    # phi_psi = torch.atan2(stable_imag, stable_real)
     phi_psi = stable_angle(z_in)
     pooled_mag, indices = F.max_pool2d(m_psi, kernel_size=kernel_size, stride=stride, return_indices=True)
     pooled_phases = retrieve_elements_from_indices(phi_psi, indices)

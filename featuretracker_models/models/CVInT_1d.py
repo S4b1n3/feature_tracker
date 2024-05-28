@@ -75,11 +75,7 @@ class rCell(nn.Module):
         self.no_inh = no_inh
 
         if self.use_attention:
-            # self.a_w_gate = cf.FullyComplexConvolution2D(hidden_size, hidden_size, kernel_size=3, stride=1, padding=3 // 2, biases=False,
-            #                                         apply_activ=True)
             self.bn_amp = nn.BatchNorm2d(hidden_size, affine=True, track_running_stats=False)
-            # self.a_u_gate = cf.ComplexConvolution2D(hidden_size, hidden_size, kernel_size=1, stride=1, padding=1 // 2, biases=False,
-            #                                         apply_activ=True)
             self.a_u_gate = cf.RealToComplexConvolution2D_1D(hidden_size, hidden_size, kernel_size=1, stride=1,
                                                           padding=1 // 2,
                                                           biases=False,
@@ -93,10 +89,6 @@ class rCell(nn.Module):
                                                           padding=1 // 2,
                                                           biases=False,
                                                           apply_activ=True)
-            # self.h_gate = cf.FullyComplexConvolution2D(hidden_size, hidden_size, kernel_size=3, stride=1,
-            #                                            padding=3 // 2,
-            #                                            biases=False,
-            #                                            apply_activ=True)
             self.h_gate = cf.ComplexConvolution2D_1D(hidden_size, hidden_size, kernel_size=1, stride=1,
                                                        padding=1 // 2,
                                                        biases=False,
@@ -104,12 +96,6 @@ class rCell(nn.Module):
             self.decode_gate = cf.ComplexConvolution2D_1D(hidden_size, 1, kernel_size=1, stride=1, padding=1 // 2,
                                                             biases=False,
                                                             apply_activ=True)
-            # self.a_w_gate = nn.Conv2d(hidden_size, hidden_size, 1, padding=1 // 2)
-            # self.a_u_gate = nn.Conv2d(hidden_size, hidden_size, 1, padding=1 // 2)
-            # init.orthogonal_(self.a_w_gate.kernel_conv.weight)
-            # init.orthogonal_(self.a_u_gate.kernel_conv.weight) #.kernel_conv
-            # init.constant_(self.a_w_gate.kernel_conv.bias, 1.)
-            # init.constant_(self.a_u_gate.bias, 1.) #.kernel_conv
 
         self.i_w_gate = nn.Conv2d(hidden_size, hidden_size, 1)
         self.i_u_gate = nn.Conv2d(hidden_size, hidden_size, 1)
@@ -158,10 +144,6 @@ class rCell(nn.Module):
             init.constant_(self.i_u_gate.bias.data, -1.)
             init.constant_(self.e_w_gate.bias.data, -1.)
             init.constant_(self.e_u_gate.bias.data, -1.)
-            # self.i_w_gate.bias.data = -self.a_u_gate.bias.data #-self.a_w_gate.kernel_conv.bias.data
-            # self.e_w_gate.bias.data = -self.a_u_gate.bias.data #-self.a_w_gate.kernel_conv.bias.data
-            # self.i_u_gate.bias.data = -self.a_u_gate.bias.data #.kernel_conv
-            # self.e_u_gate.bias.data = -self.a_u_gate.bias.data #.kernel_conv
         else:
             init.uniform_(self.i_w_gate.bias.data, 1, self.timesteps - 1)
             self.i_w_gate.bias.data.log()
@@ -185,19 +167,12 @@ class rCell(nn.Module):
                 testmode=False, v_target=0):  # Worked with tanh and softplus
         # Attention gate: filter input_ and excitation
         if self.use_attention:
-            # att_gate_complex = self.a_w_gate(cinput)
-            # att_gate = att_gate_complex.abs() + self.a_u_gate(excitation)
-            # att_gate_decoded = cf.stable_angle(self.decode_gate(att_gate_complex))
-            # att_gate = torch.sigmoid(att_gate)
-            # new_cinput = att_gate_complex
-
-            # new_cinput = self.a_w_gate(input_) #self.a_w_gate(cinput)
             ff_drive = self.a_w_gate(input_)
-            att_gate = ff_drive + self.a_u_gate(excitation)  # self.a_u_gate(cf.get_complex_number(excitation, cf.stable_angle(cinput))) # #cf.stable_angle(cinput)  # Attention Spotlight -- MOST RECENT WORKING
-            hidden_phases = self.h_gate(ff_drive + cinput)  # ff_drive +
+            att_gate = ff_drive + self.a_u_gate(excitation)
+            hidden_phases = self.h_gate(ff_drive + cinput)
             new_cinput = hidden_phases
             att_gate_decoded = cf.stable_angle(self.decode_gate(hidden_phases))
-            att_gate = torch.sigmoid(self.bn_amp((att_gate + hidden_phases).abs()))  # att_gate.abs() + self.sig_bias #self.bn_amp(att_gate.abs()) #att_gate.real #att_gate.abs()-shift/3
+            att_gate = torch.sigmoid(self.bn_amp((att_gate + hidden_phases).abs()))
 
         # Gate E/I with attention immediately
         if self.use_attention:
@@ -277,22 +252,6 @@ class CVInT(nn.Module):
 
             if t == 0:
                 cinput = x[:, :, t]
-            #
-            #     # phases = cf.initialize_phases_first_channels_color(x[:, :, t], m[:, :, t])
-            #     phases = (torch.rand_like(x[:, :, t]) * 2 * np.pi) - np.pi #
-            #     # phases = cf.stable_angle(self.init_phases(x[:, :, t])).repeat(1, 3, 1, 1)
-            #     # phases = self.init_phases(x[:, :, t])#.repeat(1, 3, 1, 1)
-            #
-            #
-            #     # phases = cf.initialize_phases_first(x[:,:,t], m[:,:,t])
-            #     cinput = cf.get_complex_number(x[:, :, t], phases)
-            #
-            #     # cinput = self.complex_preproc(cinput)
-            #
-            #     # cinput_ = torch.zeros((phases.shape[0], self.hgru_size, phases.shape[2], phases.shape[3]), requires_grad=False, dtype=torch.cfloat).to(x.device)
-            #     # for i in range(3):
-            #     #     cinput_ += self.complex_preproc(cinput[:, i][:, None])
-            #     # cinput = cinput_
 
             out = self.unit1(
                 input_=x[:, :, t].abs(),
@@ -400,183 +359,3 @@ class FC(nn.Module):
         jv_penalty = torch.tensor([1]).float().cuda()
         if testmode: return x, None, None
         return x, jv_penalty
-
-
-class KomplexNet(nn.Module):
-
-    def __init__(self, kuramoto_channels=8, dimensions=32, test_mode=False, kuramoto_args=None, nb_frames=32):
-        super(KomplexNet, self).__init__()
-        self.test_mode = test_mode
-        self.mean_r = kuramoto_args.mean_r
-        self.epsilon = kuramoto_args.epsilon
-        self.timesteps = kuramoto_args.timesteps
-        self.lr_kuramoto = kuramoto_args.lr_kuramoto
-        self.lr_kuramoto_update = kuramoto_args.lr_kuramoto_update
-        self.from_input = kuramoto_args.from_input
-        self.std_r = kuramoto_args.std_r
-        self.h = kuramoto_args.k
-        self.w = kuramoto_args.k
-        self.distraction_masks = kuramoto_args.distractor_masks
-        self.nb_frames = nb_frames
-        self.kuramoto_channels = kuramoto_channels
-        if self.from_input:
-            self.kuramoto_channels = 3
-
-        self.downsampling = nn.Conv2d(3, self.kuramoto_channels, 3, 1, padding=3 // 2, bias=False)
-        # self.downsampling.weight.data = nn.Parameter(torch.load('gabors.pt', map_location='cuda')[:, :, 1:-1, 1:-1],
-        #                                         requires_grad=True).repeat(self.kuramoto_channels//8, 3, 1, 1)
-
-        # self.downsampling.weight = nn.Parameter(torch.load('../pt_utils/gabors.pt', map_location='cuda'), requires_grad=True)  # .repeat(1,3,1,1)
-
-        self.bn1 = nn.BatchNorm3d(dimensions, eps=1e-03, track_running_stats=False)
-        self.bn2 = nn.BatchNorm3d(dimensions * 2, eps=1e-03, track_running_stats=False)
-        self.bn3 = nn.BatchNorm3d(dimensions * 2, eps=1e-03, track_running_stats=False)
-        self.preproc = cf.ComplexConvolution3D(self.kuramoto_channels, dimensions, kernel_size=3, stride=(1, 2, 2),
-                                               padding=3 // 2,
-                                               biases=True,
-                                               apply_activ=False)  # nn.Conv3d(in_channels, dimensions, kernel_size=1, padding=1 // 2)
-        # self.preproc = nn.Conv3d(in_channels, dimensions, kernel_size=1, padding=1 // 2)
-        self.conv1 = cf.ComplexConvolution3D(dimensions, dimensions * 2, kernel_size=3, stride=(1, 2, 2),
-                                             padding=3 // 2, biases=True,
-                                             apply_activ=False)  # nn.Conv3d(in_channels, dimensions, kernel_size=1, padding=1 // 2)
-        self.conv2 = cf.ComplexConvolution3D(dimensions * 2, dimensions * 2, kernel_size=3, stride=(1, 2, 2),
-                                             padding=3 // 2, biases=True,
-                                             apply_activ=False)  # nn.Conv3d(in_channels, dimensions, kernel_size=1, padding=1 // 2)
-        self.readout = cf.ComplexLinear(dimensions * 2 * nb_frames * 4 * 4, 1, biases=True, last=True,
-                                        apply_activ=False)  # nn.Linear(64*32*32*32, 1) # the first 2 is for batch size, the second digit is for the dimension
-
-        x, y = torch.meshgrid([torch.linspace(-1, 1, self.h), torch.linspace(-1, 1, self.w)])
-        dst = torch.sqrt(x ** 2 + y ** 2)
-        g = torch.exp(-((dst - self.mean_r) ** 2 / (2.0 * self.std_r ** 2)))
-        g = g.unsqueeze(0).unsqueeze(0).repeat(self.kuramoto_channels, self.kuramoto_channels, 1, 1)
-
-        self.kernel_kuramoto = nn.Parameter(g, requires_grad=True)
-
-        self.epsilon = nn.Parameter(torch.Tensor([self.epsilon]), requires_grad=False)
-        self.lr_kuramoto = nn.Parameter(torch.Tensor([self.lr_kuramoto]), requires_grad=False)
-
-        # self.phases_init = nn.Parameter((torch.rand([args.batch_size, 8, 32, 32]) * 2 * math.pi) - math.pi, requires_grad=False)
-
-    def forward(self, input, masks, testmode=False, color=False, phases=None):
-        loss_synch = 0
-        if self.from_input:
-            phases_frames = torch.zeros_like(input)
-            for f in range(input.shape[2]):
-                if f == 0:
-                    for t in range(self.timesteps):
-                        x = input[:, :, 0].to(torch.float)
-
-                        if t == 0:
-                            phases = (torch.rand_like(x) * 2 * math.pi) - math.pi
-
-                        phases = phases + self.update_phases(x, phases, self.lr_kuramoto)
-                    phases_frames[:, :, f] = phases
-                    loss_synch += (self.synch_loss(phases, masks[:, :, 0])).mean()
-                else:
-                    phases = phases + self.update_phases(input[:, :, f], phases, self.lr_kuramoto_update)
-                    phases_frames[:, :, f] = phases
-                    # loss_synch += (self.synch_loss(phases, masks[:, :, f])).mean()
-            z_in = cf.get_complex_number(input, phases_frames)
-        else:
-            phases_frames = torch.zeros((input.shape[0], self.kuramoto_channels, self.nb_frames, 32, 32)).to(
-                input.device)
-            amp_frames = torch.zeros((input.shape[0], self.kuramoto_channels, self.nb_frames, 32, 32)).to(input.device)
-            for f in range(input.shape[2]):
-                if f == 0:
-                    for t in range(self.timesteps):
-                        x = input[:, :, 0].to(torch.float)
-                        amp = torch.relu(self.downsampling(x))
-                        if t == 0:
-                            phases = (torch.rand_like(amp) * 2 * math.pi) - math.pi
-
-                        phases = phases + self.update_phases(amp, phases, self.lr_kuramoto)
-                    phases_frames[:, :, f] = phases
-                    amp_frames[:, :, f] = amp
-                    loss_synch += (self.synch_loss(phases, masks[:, :, f])).mean()
-                else:
-                    x = input[:, :, f].to(torch.float)
-
-                    amp = torch.relu(self.downsampling(x))
-
-                    phases = phases + self.update_phases(amp, phases, self.lr_kuramoto)
-                    phases_frames[:, :, f] = phases
-                    amp_frames[:, :, f] = amp
-                    loss_synch += (self.synch_loss(phases, masks[:, :, f])).mean()
-
-            z_in = cf.get_complex_number(amp_frames, phases_frames)
-        loss_synch = loss_synch / input.shape[2]
-
-        x = self.preproc(z_in)
-        x = cf.apply_activation_function(x.abs(), cf.stable_angle_2(x), self.bn1)
-        x = self.conv1(x)
-        x = cf.apply_activation_function(x.abs(), cf.stable_angle_2(x), self.bn2)
-        x = self.conv2(x)
-        x = cf.apply_activation_function(x.abs(), cf.stable_angle_2(x), self.bn3)
-
-        x_shape = x.shape
-        x, complex_output = self.readout(x.reshape(x_shape[0], -1))
-        jv_penalty = torch.tensor([1]).float().cuda()
-        if testmode: return x, None, None
-        return (x, loss_synch), jv_penalty
-
-    def update_phases(self, amp, phases, lr):
-        # lr_kuramoto = torch.sigmoid(self.lr_kuramoto)
-        # epsilon = torch.sigmoid(self.epsilon)
-        b = torch.tanh(amp)
-
-        B_cos = torch.cos(phases) * b
-        B_sin = torch.sin(phases) * b
-
-        C_cos = torch.nn.functional.conv2d(B_cos, self.kernel_kuramoto, padding="same")
-        C_sin = torch.nn.functional.conv2d(B_sin, self.kernel_kuramoto, padding="same")
-
-        S_cos = torch.sum(B_cos, dim=(1, 2, 3))[:, None, None, None]
-        S_sin = torch.sum(B_sin, dim=(1, 2, 3))[:, None, None, None]
-
-        phases_update = torch.cos(phases) * (C_sin - self.epsilon * S_sin) - torch.sin(phases) * (
-                C_cos - self.epsilon * S_cos)
-        final_phases = lr * phases_update
-
-        return final_phases
-
-    def synch_loss(self, phases, masks):
-        # phases = phases + math.pi
-        real = torch.sin(phases)
-        imag = torch.cos(phases)
-        phases = torch.atan2(real, imag)
-        new_masks = masks[:, 1:]
-        masks = new_masks.unsqueeze(2)
-        num_groups = masks.shape[1]
-        group_size = masks.sum((3, 4))
-        group_size = torch.where(group_size == 0, torch.ones_like(group_size), group_size)
-
-        # Loss is at least as large as the maxima of each individual loss (total desynchrony + total synchrony)
-        loss_bound = 1 + .5 * num_groups * (1. /
-                                            np.arange(1, num_groups + 1) ** 2)[:int(num_groups / 2.)].sum()
-
-        # Consider only the phases with active amplitude
-        active_phases = phases
-
-        # Calculate global order within each group
-
-        masked_phases = active_phases.unsqueeze(1) * masks.repeat(1, 1, self.kuramoto_channels, 1, 1)
-
-        xx = torch.where(masks.bool(), torch.cos(masked_phases), torch.zeros_like(masked_phases))
-        yy = torch.where(masks.bool(), torch.sin(masked_phases), torch.zeros_like(masked_phases))
-        go = torch.sqrt((xx.sum((3, 4))) ** 2 + (yy.sum((3, 4))) ** 2) / group_size
-        synch = 1 - go.mean(-1).sum(-1) / num_groups
-
-        # Average angle within a group
-        mean_angles = torch.atan2(yy.sum((3, 4)).mean(-1), xx.sum((3, 4)).mean(-1))
-
-        # Calculate desynchrony between average group phases
-        desynch = 0
-        for m in np.arange(1, int(np.floor(num_groups / 2.)) + 1):
-            #         K_m = 1 if m < int(np.floor(num_groups/2.)) + 1 else -1 # This is specified in Eq 36 of the cited paper and may have an effect on the values of the minimum though not its location
-            desynch += (1.0 / (2 * num_groups * m ** 2)) * (
-                    torch.cos(m * mean_angles).sum(-1) ** 2 + torch.sin(m * mean_angles).sum(-1) ** 2)
-
-        # Total loss is average of invidual losses, averaged over time
-        loss = (synch + desynch) / loss_bound
-
-        return loss.mean(dim=-1)

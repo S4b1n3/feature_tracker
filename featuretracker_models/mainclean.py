@@ -38,8 +38,6 @@ torch.backends.cudnn.benchmark = False
 global best_prec1
 best_prec1 = 0
 args = parser.parse_args()
-# video_transform_list = [video_transforms.RandomHorizontalFlip(0.5), video_transforms.RandomVerticalFlip(0.5)]  # , volume_transforms.ClipToTensor(div_255=False)]
-# transforms = video_transforms.Compose(video_transform_list)
 use_augmentations = False
 disentangle_channels = False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,13 +73,11 @@ def validate(val_loader, model, criterion, device, logiters=None, test=False):
             # debug_plot(imgs)
             output, jv_penalty = engine.model_step(model, imgs, masks, model_name=args.model, test=True, cae=cae)
             if 'CVInT' in args.model:
-                output, loss_synch, prediction_loss = output
+                output, loss_synch = output
                 loss_synch_scaled = args.loss_coef1 * loss_synch.mean()
-                prediction_loss = args.loss_coef2 * prediction_loss
             else:
                 loss_synch_scaled = 0
-                prediction_loss = 0
-            loss = criterion(output, target.float().reshape(-1, 1)) + loss_synch_scaled + prediction_loss
+            loss = criterion(output, target.float().reshape(-1, 1)) + loss_synch_scaled
             prec1, preci, rec, f1s = acc_scores(target, output.data)
 
             lossesv.update(loss.data.item(), 1)
@@ -109,7 +105,7 @@ def validate(val_loader, model, criterion, device, logiters=None, test=False):
                 else:
                     wandb.log({"val_loss": lossesv.avg, "val_acc": top1v.avg, "val_prec": precisionv.avg, "var_rec": recallv.avg, "val_f1": f1scorev.avg})
                     if 'CVInT' in args.model:
-                        wandb.log({'val_synch_loss': loss_synch.item(), 'val_scaled_loss': loss_synch_scaled, 'val_prediction_loss': prediction_loss})
+                        wandb.log({'val_synch_loss': loss_synch.item(), 'val_scaled_loss': loss_synch_scaled})
                 print(print_string)
                 with open(results_folder + args.name + '.txt', 'a+') as log_file:
                     log_file.write(print_string + '\n')
@@ -120,9 +116,6 @@ def validate(val_loader, model, criterion, device, logiters=None, test=False):
                     break
     model.train()
     return top1v.avg, precisionv.avg, recallv.avg, f1scorev.avg, lossesv.avg
-
-
-
 
 
 def save_npz(epoch, log_dict, results_folder, savename='train'):
@@ -190,11 +183,9 @@ if __name__ == '__main__':
     np.savez(os.path.join(results_folder, "hp_dict"), **hp_dict)
     criterion = torch.nn.BCEWithLogitsLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.01)
     print("Including parameters {}".format([k for k, v in model.named_parameters()]))
 
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 3, gamma=0.7)
-    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=1e-2)
     lr_init = args.learning_rate
 
     val_log_dict = {'loss': [], 'balacc': [], 'precision': [], 'recall': [], 'f1score': []}
@@ -221,25 +212,17 @@ if __name__ == '__main__':
         accv, precv, recv, f1sv, losv = validate(val_loader, model, criterion, device, logiters=3)
         model.train()
         for idx, (imgs, target) in enumerate(train_loader):
-            #with torch.autocast(device_type='cuda', dtype=torch.float16):
             data_time.update(time.perf_counter() - end)
-            if args.init_phases == 'cae':
-                independent_frames = True
-            else:
-                independent_frames = False
-            imgs, masks, target = engine.prepare_data(imgs=imgs, target=target, args=args, device=device, disentangle_channels=disentangle_channels, independent_images=independent_frames)  # noqa
-
+            imgs, masks, target = engine.prepare_data(imgs=imgs, target=target, args=args, device=device, disentangle_channels=disentangle_channels, independent_images=False)  # noqa
 
             # Run training
             output, jv_penalty = engine.model_step(model, imgs, masks, model_name=args.model, cae=cae)
             if 'CVInT' in args.model:
-                output, loss_synch, prediction_loss = output
+                output, loss_synch = output
                 loss_synch_scaled = args.loss_coef1 * loss_synch.mean()
-                prediction_loss = args.loss_coef2 * prediction_loss
             else:
                 loss_synch_scaled = 0
-                prediction_loss = 0
-            loss = criterion(output, target.float().reshape(-1, 1)) + loss_synch_scaled + prediction_loss
+            loss = criterion(output, target.float().reshape(-1, 1)) + loss_synch_scaled
             losses.update(loss.data.item(), 1)
             jv_penalty = jv_penalty.mean()
             train_log_dict['jvpen'].append(jv_penalty.item())
@@ -277,7 +260,7 @@ if __name__ == '__main__':
                     log_file.write(print_string + '\n')
                 wandb.log({'train_loss': losses.val, 'train_acc': top1.val, 'train_prec': precision.val, 'train_rec': recall.val, 'train_f1': f1score.val, 'train _jv_penalty': jv_penalty.item(), 'train_lr': optimizer.param_groups[0]['lr']})
                 if 'CVInT' in args.model:
-                    wandb.log({'train_synch_loss': loss_synch.item(), 'train_scaled_loss': loss_synch_scaled, 'train_prediction_loss': prediction_loss})
+                    wandb.log({'train_synch_loss': loss_synch.item(), 'train_scaled_loss': loss_synch_scaled})
 
         # lr_scheduler.step()
         print(epoch)
@@ -312,24 +295,11 @@ if __name__ == '__main__':
                 'best_acc': accv,
                 'best_loss': losv}, True, results_folder)
 
-            # # save a model checkpoint at the end of each epoch to W&B
-            # model_artifact = wandb.Artifact(
-            #     name=args.name,
-            #     type="model")
-            #
-            # # Add your model weights file to the artifact
-            # model_artifact.add_file("model.pt")
-            #
-            # # log the Artifact to W&B
-            # wandb.log_artifact(
-            #     model_artifact,
-            #     aliases=[f"epoch - {epoch + 1}", f"val_accuracy - {accv}"])
 
-
-        #     ES(losv, model, epoch)
-        # if ES.early_stop:
-        #     print("Early stopping triggered. Quitting.")
-        #     os._exit(1)
+            ES(losv, model, epoch)
+        if ES.early_stop:
+            print("Early stopping triggered. Quitting.")
+            os._exit(1)
 
     model.eval()
     accv, precv, recv, f1sv, losv = validate(test_loader, model, criterion, device, logiters=3, test=True)
